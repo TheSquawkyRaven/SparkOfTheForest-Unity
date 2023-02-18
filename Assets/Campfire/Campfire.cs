@@ -15,13 +15,15 @@ public class Campfire : MonoBehaviour
     public TextMeshPro PointsText;
     public GameObject MaxTextObj;
 
+    public int StartingFirePoints;
     public int MaxFirePoints;
     public int FirePoints;
 
 
     private void Awake()
     {
-        FirePoints = 0;
+        FirePoints = 100;
+        PointsText.SetText(FirePoints.ToString());
     }
 
     private void Start()

@@ -19,8 +19,14 @@ public class AnimAdv : MonoBehaviour
 
     public int AnimSetIndex;
 
+    private bool stopped;
+
     private void Update()
     {
+        if (stopped)
+        {
+            return;
+        }
         timeC += Time.deltaTime;
         if (timeC > speed)
         {
@@ -44,5 +50,9 @@ public class AnimAdv : MonoBehaviour
         animIndex = 0;
     }
 
+    public void Stop(bool stop)
+    {
+        stopped = stop;
+    }
 
 }

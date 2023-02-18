@@ -6,12 +6,12 @@ public class Player : MonoBehaviour
 {
 
     public const string CampfireTag = "Campfire";
+    public const string OrbTag = "Orb";
 
     public Transform TR;
     public SpriteRenderer SR;
 
     public AnimAdv Anim;
-    public float MoveSpeed;
 
     public GameObject FireShotObj;
     public Vector2 ShotOffset;
@@ -26,14 +26,28 @@ public class Player : MonoBehaviour
     public ParticleSystem DepositingPS;
     private ParticleSystem.EmissionModule DepositingPSEmission;
 
-    public float shotSpeed;
+    public FirePointsUI FirePointsUI;
 
-    public int RespawnFirePoints;
+    public float MinSize;
+    public float MaxSize;
+    public int MaxSizeFirePoints;
+
+    private float CurrentSize;
+
+    //UPGRADES
+    public float MoveSpeed;
+    public float shotSpeed;
+    public int FirePointsPerShot;
+    public int MaxFirePoints;
+
+    public int RespawnFirePoints;   //Deposit Minimum fire points
     public int FirePoints;
 
     public float depositCampfireRate;
     public float depositCampfireInitialDelay;
     public int depositCampfireAmount;
+
+    public int FirePointsPerOrb;
 
     private float shotTimeC;
 
@@ -48,21 +62,46 @@ public class Player : MonoBehaviour
     private void Awake()
     {
         FirePoints = RespawnFirePoints;
+        FirePointsUpdated();
         DepositingPSEmission = DepositingPS.emission;
         DepositingPSEmission.rateOverTimeMultiplier = 0;
+
     }
 
     private void Start()
     {
         MovedUpdate();
+        FirePointsUI.SetMaxFirePoints(MaxFirePoints);
+        FirePointsUI.SetFirePoints(FirePoints);
     }
 
+    private void FirePointsUpdated()
+    {
+        FirePointsUI.SetFirePoints(FirePoints);
+        float scale = (float)FirePoints / MaxSizeFirePoints;
+        CurrentSize = MinSize + (MaxSize - MinSize) * scale;
+        TR.localScale = new(CurrentSize, CurrentSize, 1);
+    }
+    private void FlashFirePoints()
+    {
+
+    }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.collider.CompareTag(CampfireTag))
         {
             CampfireInRange = collision.collider.GetComponent<Campfire>();
+        }
+        if (FirePoints >= MaxFirePoints)
+        {
+            return;
+        }
+        else if (collision.collider.CompareTag(OrbTag))
+        {
+            Destroy(collision.gameObject);
+            FirePoints += FirePointsPerOrb;
+            FirePointsUpdated();
         }
     }
 
@@ -132,7 +171,7 @@ public class Player : MonoBehaviour
             isMoving = true;
         }
         input.Normalize();
-        Vector3 movement = MoveSpeed * Time.deltaTime * input;
+        Vector3 movement = MoveSpeed * CurrentSize * Time.deltaTime * input;
 
         TR.localPosition += movement;
     }
@@ -150,9 +189,21 @@ public class Player : MonoBehaviour
             if (shotTimeC > shotSpeed)
             {
                 shotTimeC = 0;
-                ShootShot();
+                TryShootShot();
             }
         }
+    }
+
+    private void TryShootShot()
+    {
+        if (FirePoints >= FirePointsPerShot)
+        {
+            ShootShot();
+            FirePoints -= FirePointsPerShot;
+            FirePointsUpdated();
+            return;
+        }
+        FlashFirePoints();
     }
 
     private void ShootShot()
@@ -176,13 +227,20 @@ public class Player : MonoBehaviour
             DepositingPSEmission.rateOverTimeMultiplier = 0;
             return;
         }
+
         if (Input.GetMouseButtonDown(1))
         {
             depositCampfireInitialDelayed = false;
             depositCampfireC = 0;
             depositCampfireMultiplier = 1;
-            CampfireInRange.DepositFirePoints(depositCampfireAmount);
-            DepositingPSEmission.rateOverTimeMultiplier = 1;
+            if (TryDepositToCampfire(depositCampfireAmount))
+            {
+                DepositingPSEmission.rateOverTimeMultiplier = 1;
+            }
+            else
+            {
+                DepositingPSEmission.rateOverTimeMultiplier = 0;
+            }
         }
         if (Input.GetMouseButton(1))
         {
@@ -199,8 +257,14 @@ public class Player : MonoBehaviour
             {
                 depositCampfireC = 0;
                 depositCampfireMultiplier++;
-                CampfireInRange.DepositFirePoints(depositCampfireAmount * depositCampfireMultiplier);
-                DepositingPSEmission.rateOverTimeMultiplier = depositCampfireMultiplier;
+                if (TryDepositToCampfire(depositCampfireAmount))
+                {
+                    DepositingPSEmission.rateOverTimeMultiplier = depositCampfireMultiplier;
+                }
+                else
+                {
+                    DepositingPSEmission.rateOverTimeMultiplier = 0;
+                }
             }
         }
         if (Input.GetMouseButtonUp(1))
@@ -209,5 +273,29 @@ public class Player : MonoBehaviour
         }
     }
 
+    private bool TryDepositToCampfire(int firePoints)
+    {
+        if (FirePoints <= RespawnFirePoints)
+        {
+            //Don't deposit
+            FlashFirePoints();
+            return false;
+        }
+        int willHaveRemaining = FirePoints - firePoints;
+        if (willHaveRemaining < RespawnFirePoints)
+        {
+            firePoints = FirePoints - RespawnFirePoints;
+        }
+        int remaining = CampfireInRange.DepositFirePoints(firePoints);
+        if (remaining == firePoints)
+        {
+            //Not deposited (campfire full)
+            return false;
+        }
+        FirePoints -= firePoints;
+        FirePoints += remaining;
+        FirePointsUpdated();
+        return true;
+    }
 
 }

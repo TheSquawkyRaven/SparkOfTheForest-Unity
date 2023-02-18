@@ -105,7 +105,8 @@ MonoBehaviour:
   Radius: 2
   PointsText: {fileID: 8071896078020935578}
   MaxTextObj: {fileID: 8071896077623331582}
-  MaxFirePoints: 750
+  StartingFirePoints: 100
+  MaxFirePoints: 250
   FirePoints: 0
 --- !u!114 &8071896077522082200
 MonoBehaviour:
@@ -415,7 +416,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 125
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: a953924866bd86744bbb7bef578416e5, type: 2}
   m_sharedMaterial: {fileID: -7353890276227492303, guid: a953924866bd86744bbb7bef578416e5, type: 2}
@@ -426,13 +427,13 @@ MonoBehaviour:
     serializedVersion: 2
     rgba: 4294967295
   m_fontColor: {r: 1, g: 1, b: 1, a: 1}
-  m_enableVertexGradient: 0
-  m_colorMode: 3
+  m_enableVertexGradient: 1
+  m_colorMode: 2
   m_fontColorGradient:
-    topLeft: {r: 1, g: 1, b: 1, a: 1}
-    topRight: {r: 1, g: 1, b: 1, a: 1}
-    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
-    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+    topLeft: {r: 1, g: 1, b: 0, a: 1}
+    topRight: {r: 1, g: 1, b: 0, a: 1}
+    bottomLeft: {r: 1, g: 0, b: 0, a: 1}
+    bottomRight: {r: 1, g: 0, b: 0, a: 1}
   m_fontColorGradientPreset: {fileID: 0}
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0

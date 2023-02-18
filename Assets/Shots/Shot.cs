@@ -25,7 +25,7 @@ public class Shot : MonoBehaviour
     public float DespawnTime;
     public float ShrinkTime;
 
-    //Upgradables
+    //UPGRADES
     public float ChanceToSpreadToTree;
     public int FirePointsSpreadToTree;  //Duplicated
 
