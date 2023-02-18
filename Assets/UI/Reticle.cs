@@ -16,7 +16,6 @@ public class Reticle : MonoBehaviour
     public float IncreaseSize;
     public float OriginalSize;
 
-    private bool recoiling;
     private float timeC;
 
     private float currentAngle;
@@ -29,7 +28,6 @@ public class Reticle : MonoBehaviour
 
     public void Recoil()
     {
-        recoiling = true;
         targetAngle += SpinAngle;
         RT.sizeDelta = new(IncreaseSize, IncreaseSize);
         timeC = 0;

@@ -56,7 +56,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -105,8 +105,13 @@ MonoBehaviour:
   CL: {fileID: 5466241798399866483}
   RotationOffset: 90
   Speed: 7.5
+  ShotFirePointsRequired: 5
+  FirePoints: 0
   AppearTime: 0.1
   DespawnTime: 5
+  ShrinkTime: 0.2
+  ChanceToSpreadToTree: 0
+  FirePointsSpreadToTree: 0
 --- !u!114 &5466241798399866380
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -137,7 +142,7 @@ CapsuleCollider2D:
   m_IsTrigger: 1
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0.01586929, y: 0.05201322}
+  m_Offset: {x: 0.01586929, y: -0.15}
   m_Size: {x: 0.5226179, y: 0.9257678}
   m_Direction: 0
 --- !u!50 &4469761252121871047

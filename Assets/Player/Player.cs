@@ -5,6 +5,8 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
 
+    public const string CampfireTag = "Campfire";
+
     public Transform TR;
     public SpriteRenderer SR;
 
@@ -14,17 +16,63 @@ public class Player : MonoBehaviour
     public GameObject FireShotObj;
     public Vector2 ShotOffset;
 
+    public TreesManager TreesManager;
+    public CampfireManager CampfireManager;
+
     public TerrainManager TerrainManager;
     public Camera cam;
 
     public Reticle Reticle;
+    public ParticleSystem DepositingPS;
+    private ParticleSystem.EmissionModule DepositingPSEmission;
 
     public float shotSpeed;
+
+    public int RespawnFirePoints;
+    public int FirePoints;
+
+    public float depositCampfireRate;
+    public float depositCampfireInitialDelay;
+    public int depositCampfireAmount;
 
     private float shotTimeC;
 
     private bool facingRight;
     private bool isMoving = false;
+
+    private Campfire CampfireInRange;
+    private float depositCampfireC;
+    private int depositCampfireMultiplier;
+    private bool depositCampfireInitialDelayed;
+
+    private void Awake()
+    {
+        FirePoints = RespawnFirePoints;
+        DepositingPSEmission = DepositingPS.emission;
+        DepositingPSEmission.rateOverTimeMultiplier = 0;
+    }
+
+    private void Start()
+    {
+        MovedUpdate();
+    }
+
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag(CampfireTag))
+        {
+            CampfireInRange = collision.collider.GetComponent<Campfire>();
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag(CampfireTag))
+        {
+            CampfireInRange = null;
+        }
+    }
 
     private void Update()
     {
@@ -56,6 +104,7 @@ public class Player : MonoBehaviour
         }
         MovedUpdate();
         ShotUpdate();
+        CampfireUpdate();
     }
 
     private void MoveUpdate()
@@ -114,9 +163,50 @@ public class Player : MonoBehaviour
         {
             shotOffset.x = -shotOffset.x;
         }
-        shot.SetShot((Vector2)TR.localPosition + shotOffset, cam.ScreenToWorldPoint(Input.mousePosition) - TR.localPosition);
+        shot.SetShot(this, (Vector2)TR.localPosition + shotOffset, cam.ScreenToWorldPoint(Input.mousePosition) - TR.localPosition);
 
         Reticle.Recoil();
+    }
+
+
+    private void CampfireUpdate()
+    {
+        if (CampfireInRange == null)
+        {
+            DepositingPSEmission.rateOverTimeMultiplier = 0;
+            return;
+        }
+        if (Input.GetMouseButtonDown(1))
+        {
+            depositCampfireInitialDelayed = false;
+            depositCampfireC = 0;
+            depositCampfireMultiplier = 1;
+            CampfireInRange.DepositFirePoints(depositCampfireAmount);
+            DepositingPSEmission.rateOverTimeMultiplier = 1;
+        }
+        if (Input.GetMouseButton(1))
+        {
+            depositCampfireC += Time.deltaTime;
+            if (!depositCampfireInitialDelayed)
+            {
+                if (depositCampfireC > depositCampfireInitialDelay)
+                {
+                    depositCampfireC = 0;
+                    depositCampfireInitialDelayed = true;
+                }
+            }
+            else if (depositCampfireC > depositCampfireRate)
+            {
+                depositCampfireC = 0;
+                depositCampfireMultiplier++;
+                CampfireInRange.DepositFirePoints(depositCampfireAmount * depositCampfireMultiplier);
+                DepositingPSEmission.rateOverTimeMultiplier = depositCampfireMultiplier;
+            }
+        }
+        if (Input.GetMouseButtonUp(1))
+        {
+            DepositingPSEmission.rateOverTimeMultiplier = 0;
+        }
     }
 
 

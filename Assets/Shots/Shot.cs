@@ -5,20 +5,39 @@ using UnityEngine;
 public class Shot : MonoBehaviour
 {
 
+    private const string TreeTag = "Tree";
+    private const string EnemyTag = "Enemy";
+
     public Transform TR;
     public SpriteRenderer SR;
     public Collider2D CL;
+
+    private Player player;
+
     public float RotationOffset;
     public float Speed;
 
+    public int ShotFirePointsRequired;
+    public int FirePoints;
+
+
     public float AppearTime;
     public float DespawnTime;
+    public float ShrinkTime;
+
+    //Upgradables
+    public float ChanceToSpreadToTree;
+    public int FirePointsSpreadToTree;  //Duplicated
 
     private Vector2 direction;
+    private bool doShrink;
     private float aliveTimeC;
+    private float shrinkTimeC;
 
-    public void SetShot(Vector2 pos, Vector2 direction)
+    public void SetShot(Player player, Vector2 pos, Vector2 direction)
     {
+        this.player = player;
+        FirePoints = ShotFirePointsRequired;
         this.direction = direction.normalized;
 
         TR.localPosition = pos;
@@ -29,21 +48,60 @@ public class Shot : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        Destroy(gameObject);
-        Destroy(collision.gameObject);
-        CL.enabled = false;
+        if (collision.CompareTag(TreeTag))
+        {
+            bool spreadToTree = Random.value < ChanceToSpreadToTree;
+            if (!spreadToTree)
+            {
+                return;
+            }
+            player.TreesManager.SetTreeOnFire(collision.gameObject, FirePointsSpreadToTree);
+
+            // Don't destroy, just spread fire
+        }
+        else if (collision.CompareTag(EnemyTag))
+        {
+            //TODO Inflict damage with FirePoints
+            Destroy(gameObject);
+        }
+        if (FirePoints <= 0)
+        {
+            Destroy(gameObject);
+        }
+        doShrink = true;
+        shrinkTimeC = 0;
     }
 
     private void Update()
     {
         aliveTimeC += Time.deltaTime;
 
-        if (aliveTimeC < AppearTime)
+        float scale = aliveTimeC / AppearTime;
+        if (scale > 1)
         {
-            float scale = aliveTimeC / AppearTime;
-            Color color = Color.white;
-            color.a = scale;
-            SR.color = color;
+            scale = 1;
+            SR.color = Color.white;
+        }
+        else
+        {
+            Color c = Color.white;
+            c.a = scale;
+            SR.color = c;
+        }
+        if (doShrink)
+        {
+            shrinkTimeC += Time.deltaTime;
+            float targetScale = (float)FirePoints / ShotFirePointsRequired;
+            float shrinkScale = shrinkTimeC / ShrinkTime;
+            if (shrinkScale > 1)
+            {
+                shrinkScale = 1;
+            }
+            float currentScale = Mathf.Lerp(scale, targetScale, shrinkScale);
+            TR.localScale = new(currentScale, currentScale, 1);
+        }
+        else
+        {
             TR.localScale = new(scale, scale, 1);
         }
 
