@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Analytics;
 
-public class Tree : MonoBehaviour
+public class Tree : MonoBehaviour, IFire
 {
 
     public int FirePoints;
@@ -15,6 +15,11 @@ public class Tree : MonoBehaviour
     private AnimAdv FireAnimAdv;
 
     private float fpIncreaseC;
+    private bool hasSpread = false;
+
+    public bool Extinguished => burnStage > 2;
+
+    public Vector3 Position => transform.localPosition;
 
     //Entry
     public void SetOnFire(TreesManager TreesManager, AnimAdv fireAnimAdv, int firePoints)
@@ -27,10 +32,14 @@ public class Tree : MonoBehaviour
 
     public void SetExtinguished()
     {
-        Destroy(FireAnimAdv);
+        Destroy(FireAnimAdv.gameObject);
         Destroy(this);
     }
 
+    public void DealDamage(int damage)
+    {
+        ReduceFirePoints(damage);
+    }
 
     public void AddFirePoints(int firePoints)
     {
@@ -75,6 +84,34 @@ public class Tree : MonoBehaviour
 
     private void BurnStageUpdate()
     {
+        int intendedStage = 0;
+        if (FirePoints > TreesManager.FirePointsToAsh)
+        {
+            intendedStage = 3;
+        }
+        else if (FirePoints > TreesManager.FirePointsToFinalBurn)
+        {
+            intendedStage = 2;
+        }
+        else if (FirePoints > TreesManager.FirePointsToMidBurn)
+        {
+            intendedStage = 1;
+        }
+        else if (FirePoints > 0)
+        {
+            intendedStage = 0;
+        }
+
+        if (intendedStage < burnStage)
+        {
+            burnStage = -1;
+        }
+
+        if (burnStage == -1)
+        {
+            burnStage++;
+            BurnStageChanged();
+        }
         if (burnStage == 0)
         {
             if (FirePoints > TreesManager.FirePointsToMidBurn)
@@ -82,7 +119,6 @@ public class Tree : MonoBehaviour
                 burnStage++;
                 BurnStageChanged();
             }
-            return;
         }
         if (burnStage == 1)
         {
@@ -92,7 +128,6 @@ public class Tree : MonoBehaviour
                 BurnStageChanged();
                 TrySpreadToOthers();
             }
-            return;
         }
         if (burnStage == 2)
         {
@@ -102,7 +137,6 @@ public class Tree : MonoBehaviour
                 BurnStageChanged();
                 DropFireOrb();
             }
-            return;
         }
     }
 
@@ -114,6 +148,7 @@ public class Tree : MonoBehaviour
         }
         else
         {
+            FireLost.treesDestroyed++;
             Destroy(FireAnimAdv.gameObject);
             GetComponent<SpriteRenderer>().sprite = TreesManager.AshSprite;
         }
@@ -121,6 +156,12 @@ public class Tree : MonoBehaviour
 
     private void TrySpreadToOthers()
     {
+        if (hasSpread)
+        {
+            return;
+        }
+        hasSpread = true;
+
         List<Collider2D> treesCL = TreesManager.TreeColliders;
         treesCL.Clear();
         int c = Physics2D.OverlapCircle(transform.localPosition, TreesManager.FireSpreadRadius, TreesManager.TreeCF, treesCL);

@@ -62,6 +62,7 @@ public class Shot : MonoBehaviour
         else if (collision.CompareTag(EnemyTag))
         {
             //TODO Inflict damage with FirePoints
+            collision.GetComponent<Enemy>().DealDamage(FirePoints);
             Destroy(gameObject);
         }
         if (FirePoints <= 0)

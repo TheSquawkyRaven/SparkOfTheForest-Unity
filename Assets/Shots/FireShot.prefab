@@ -110,7 +110,7 @@ MonoBehaviour:
   AppearTime: 0.1
   DespawnTime: 5
   ShrinkTime: 0.2
-  ChanceToSpreadToTree: 0.3
+  ChanceToSpreadToTree: 0.2
   FirePointsSpreadToTree: 1
 --- !u!114 &5466241798399866380
 MonoBehaviour:

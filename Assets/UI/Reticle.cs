@@ -1,11 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public class Reticle : MonoBehaviour
 {
 
     public RectTransform RT;
+    public Player player;
+
+    public CanvasScaler CS;
 
     public float ConstantSpinAngle;
     public float SpinAngle;
@@ -21,9 +26,31 @@ public class Reticle : MonoBehaviour
     private float currentAngle;
     private float targetAngle;
 
+    private int screenWidth;
+    private int screenHeight;
+
+    private float canvasScale;
+
     private void Start()
     {
-        Cursor.visible = false;
+        UnityEngine.Cursor.visible = false;
+    }
+
+
+    private void ResolutionChanged()
+    {
+        float scale = (screenWidth - 640) / (1920 - 640);
+        //if (scale > 1)
+        //{
+        //    scale = 1;
+        //}
+        if (scale < 0.5f)
+        {
+            scale = 0.5f;
+        }
+
+        CS.scaleFactor = scale;
+        canvasScale = scale;
     }
 
     public void Recoil()
@@ -35,7 +62,15 @@ public class Reticle : MonoBehaviour
 
     private void Update()
     {
-        RT.anchoredPosition = Input.mousePosition;
+        ResolutionCheckUpdate();
+
+        if (player.IsDead)
+        {
+            RT.anchoredPosition = new(-100, -100);
+            return;
+        }
+
+        RT.anchoredPosition = Input.mousePosition * (1f / canvasScale);
         targetAngle += ConstantSpinAngle * Time.deltaTime;
 
         currentAngle = Mathf.Lerp(currentAngle, targetAngle, SpinRate);
@@ -50,6 +85,16 @@ public class Reticle : MonoBehaviour
         float size = Mathf.Lerp(IncreaseSize, OriginalSize, scale);
         RT.sizeDelta = new(size, size);
 
+    }
+
+    private void ResolutionCheckUpdate()
+    {
+        if (screenWidth != Screen.width || screenHeight != Screen.height)
+        {
+            screenWidth = Screen.width;
+            screenHeight = Screen.height;
+            ResolutionChanged();
+        }
     }
 
 }

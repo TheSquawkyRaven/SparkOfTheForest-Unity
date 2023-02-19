@@ -1,9 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using Unity.VisualScripting;
 using UnityEngine;
 
-public class Player : MonoBehaviour
+
+public interface IFire
 {
+    public GameObject gameObject { get; }
+    public bool Extinguished { get; }
+    public void DealDamage(int damage);
+    public Vector3 Position { get; }
+}
+
+public class Player : MonoBehaviour, IFire
+{
+
+    public static Player Instance;
 
     public const string CampfireTag = "Campfire";
     public const string OrbTag = "Orb";
@@ -20,13 +33,25 @@ public class Player : MonoBehaviour
     public CampfireManager CampfireManager;
 
     public TerrainManager TerrainManager;
+    public PlayerCamera PlayerCam;
     public Camera cam;
 
     public Reticle Reticle;
+    public ParticleSystem FirePS;
+    private ParticleSystem.EmissionModule FirePSEmission;
     public ParticleSystem DepositingPS;
     private ParticleSystem.EmissionModule DepositingPSEmission;
 
     public FirePointsUI FirePointsUI;
+    public SparkExtinguished SparkExtinguished;
+
+    public InputUI InputUI;
+
+    public AudioSource Reignite;
+    public AudioSource ShootA;
+    public AudioSource Poof;
+    public AudioSource OrbBeep;
+    public AudioSource Click;
 
     public float MinSize;
     public float MaxSize;
@@ -39,8 +64,8 @@ public class Player : MonoBehaviour
     public float shotSpeed;
     public int FirePointsPerShot;
     public int MaxFirePoints;
-
     public int RespawnFirePoints;   //Deposit Minimum fire points
+
     public int FirePoints;
 
     public float depositCampfireRate;
@@ -58,39 +83,120 @@ public class Player : MonoBehaviour
     private float depositCampfireC;
     private int depositCampfireMultiplier;
     private bool depositCampfireInitialDelayed;
+    private bool dead;
+    public bool IsDead => dead;
+    public bool Extinguished => dead;
+
+    public Vector3 Position => TR.localPosition;
 
     private void Awake()
     {
-        FirePoints = RespawnFirePoints;
-        FirePointsUpdated();
-        DepositingPSEmission = DepositingPS.emission;
-        DepositingPSEmission.rateOverTimeMultiplier = 0;
+        Instance = this;
 
+        FirePSEmission = FirePS.emission;
+        DepositingPSEmission = DepositingPS.emission;
     }
 
     private void Start()
     {
+        Respawned(CampfireManager.GetFirstCampfire().TR.localPosition);
+        SparkExtinguished.SetReigniteRequirement(RespawnFirePoints);
+    }
+
+    public void PlayClick()
+    {
+        Click.Play();
+    }
+
+    [ContextMenu("Reignite")]
+    public void ReignitePlay()
+    {
+        Reignite.Play();
+    }
+
+    public void Respawned(Vector3 pos)
+    {
+        Reignite.Play();
+
+        dead = false;
+        SR.enabled = true;
+
+        TR.localPosition = pos;
+        PlayerCam.SetTrackPlayer();
+
         MovedUpdate();
         FirePointsUI.SetMaxFirePoints(MaxFirePoints);
         FirePointsUI.SetFirePoints(FirePoints);
+
+        FirePoints = RespawnFirePoints;
+        FirePointsUpdated();
+
+        FirePS.Emit(100);
+        FirePSEmission.rateOverTimeMultiplier = 1;
+        DepositingPS.gameObject.SetActive(true);
+        DepositingPSEmission.rateOverTimeMultiplier = 0;
+
+        Cursor.visible = false;
+
+    }
+
+    public void Dead()
+    {
+        Poof.Play();
+
+        dead = true;
+        FirePoints = 0;
+        SR.enabled = false;
+        CampfireManager.PlayerDeadDetermineReigniteOrLose();
+
+        FirePS.Emit(100);
+        FirePSEmission.rateOverTimeMultiplier = 0;
+        DepositingPS.gameObject.SetActive(false);
+        DepositingPSEmission.rateOverTimeMultiplier = 0;
+
+        Cursor.visible = true;
     }
 
     private void FirePointsUpdated()
     {
+        if (dead)
+        {
+            return;
+        }
+        if (FirePoints <= 0)
+        {
+            Dead();
+        }
         FirePointsUI.SetFirePoints(FirePoints);
         float scale = (float)FirePoints / MaxSizeFirePoints;
         CurrentSize = MinSize + (MaxSize - MinSize) * scale;
         TR.localScale = new(CurrentSize, CurrentSize, 1);
+
     }
     private void FlashFirePoints()
     {
 
     }
 
+    public void DealDamage(int damage)
+    {
+        FirePoints -= damage;
+        if (FirePoints < 0)
+        {
+            FirePoints = 0;
+        }
+        FirePointsUpdated();
+    }
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        if (dead)
+        {
+            return;
+        }
         if (collision.collider.CompareTag(CampfireTag))
         {
+            InputUI.ShowDepositToCampfire(true);
             CampfireInRange = collision.collider.GetComponent<Campfire>();
         }
         if (FirePoints >= MaxFirePoints)
@@ -99,6 +205,7 @@ public class Player : MonoBehaviour
         }
         else if (collision.collider.CompareTag(OrbTag))
         {
+            OrbBeep.Play();
             Destroy(collision.gameObject);
             FirePoints += FirePointsPerOrb;
             FirePointsUpdated();
@@ -107,8 +214,13 @@ public class Player : MonoBehaviour
 
     private void OnCollisionExit2D(Collision2D collision)
     {
+        if (dead)
+        {
+            return;
+        }
         if (collision.collider.CompareTag(CampfireTag))
         {
+            InputUI.ShowDepositToCampfire(false);
             CampfireInRange = null;
         }
     }
@@ -144,10 +256,15 @@ public class Player : MonoBehaviour
         MovedUpdate();
         ShotUpdate();
         CampfireUpdate();
+        PlaceCampfireUpdate();
     }
 
     private void MoveUpdate()
     {
+        if (dead)
+        {
+            return;
+        }
         isMoving = false;
         Vector2 input = Vector2.zero;
         if (Input.GetKey(KeyCode.W))
@@ -183,6 +300,10 @@ public class Player : MonoBehaviour
 
     private void ShotUpdate()
     {
+        if (dead)
+        {
+            return;
+        }
         shotTimeC += Time.deltaTime;
         if (Input.GetMouseButton(0))
         {
@@ -209,6 +330,7 @@ public class Player : MonoBehaviour
     private void ShootShot()
     {
         Shot shot = Instantiate(FireShotObj).GetComponent<Shot>();
+        ShootA.Play();
         Vector2 shotOffset = ShotOffset;
         if (!facingRight)
         {
@@ -222,6 +344,10 @@ public class Player : MonoBehaviour
 
     private void CampfireUpdate()
     {
+        if (dead)
+        {
+            return;
+        }
         if (CampfireInRange == null)
         {
             DepositingPSEmission.rateOverTimeMultiplier = 0;
@@ -275,16 +401,20 @@ public class Player : MonoBehaviour
 
     private bool TryDepositToCampfire(int firePoints)
     {
-        if (FirePoints <= RespawnFirePoints)
+        //if (FirePoints <= RespawnFirePoints)
+        //{
+        //    //Don't deposit
+        //    FlashFirePoints();
+        //    return false;
+        //}
+        //int willHaveRemaining = FirePoints - firePoints;
+        //if (willHaveRemaining < RespawnFirePoints)
+        //{
+        //    firePoints = FirePoints - RespawnFirePoints;
+        //}
+        if (FirePoints < firePoints)
         {
-            //Don't deposit
-            FlashFirePoints();
-            return false;
-        }
-        int willHaveRemaining = FirePoints - firePoints;
-        if (willHaveRemaining < RespawnFirePoints)
-        {
-            firePoints = FirePoints - RespawnFirePoints;
+            firePoints = FirePoints;
         }
         int remaining = CampfireInRange.DepositFirePoints(firePoints);
         if (remaining == firePoints)
@@ -296,6 +426,41 @@ public class Player : MonoBehaviour
         FirePoints += remaining;
         FirePointsUpdated();
         return true;
+    }
+
+    private void PlaceCampfireUpdate()
+    {
+        if (FirePoints < CampfireManager.CampfireFirePoints)
+        {
+            InputUI.ShowPlaceCampfire(false);
+            return;
+        }
+        Collider2D surroundingCampfire = Physics2D.OverlapCircle(TR.localPosition, 2, 1 << 10);
+        if (surroundingCampfire != null)
+        {
+            InputUI.ShowPlaceCampfire(false);
+            return;
+        }
+        InputUI.ShowPlaceCampfire(true);
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (FirePoints >= CampfireManager.CampfireFirePoints)
+            {
+                FirePoints -= CampfireManager.CampfireFirePoints;
+                FirePointsUpdated();
+                PlaceCampfire();
+            }
+            else
+            {
+                FlashFirePoints();
+            }
+        }
+    }
+
+    private void PlaceCampfire()
+    {
+        CampfireManager.CreateCampfire(TR.localPosition);
     }
 
 }
