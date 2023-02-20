@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Analytics;
 
-public class Tree : MonoBehaviour, IFire
+public class BurningTree : MonoBehaviour, IFire
 {
 
     public int FirePoints;

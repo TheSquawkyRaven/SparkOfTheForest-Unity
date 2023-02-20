@@ -30,9 +30,9 @@ public class TreesManager : MonoBehaviour
 
     public void SetTreeOnFire(GameObject treeObj, int firePoints)
     {
-        if (!treeObj.TryGetComponent(out Tree tree))
+        if (!treeObj.TryGetComponent(out BurningTree tree))
         {
-            tree = treeObj.AddComponent<Tree>();
+            tree = treeObj.AddComponent<BurningTree>();
             AnimAdv fireAnimAdv = Instantiate(FirePrefab, tree.transform).GetComponent<AnimAdv>();
             tree.SetOnFire(this, fireAnimAdv, firePoints);
         }
@@ -42,7 +42,7 @@ public class TreesManager : MonoBehaviour
         }
     }
 
-    public void FireSpreadToTree(Tree source, Collider2D treeCL, int firePoints)
+    public void FireSpreadToTree(BurningTree source, Collider2D treeCL, int firePoints)
     {
         //use source to spread flame
         StartCoroutine(SetTreeOnFireDelayed(treeCL, firePoints, SpreadFlameTime));
@@ -57,7 +57,7 @@ public class TreesManager : MonoBehaviour
         SetTreeOnFire(treeCL.gameObject, firePoints);
     }
 
-    public void DropFireOrb(Tree tree)
+    public void DropFireOrb(BurningTree tree)
     {
         Vector3 pos = tree.transform.localPosition;
         Instantiate(OrbPrefab, pos, Quaternion.identity, OrbContainer);
